@@ -1,9 +1,9 @@
 const Express = require('express');
 const jwt = require('express-jwt');
 const logger = require('debug')('express');
-const jwksRsa = require('../../lib');
+const jwksRsa = require('jwks-rsa');
 
-const jwksHost = process.env.JWKS_HOST;
+const jwksUri = process.env.JWKS_URI;
 const audience = process.env.AUDIENCE;
 const issuer = process.env.ISSUER;
 
@@ -13,24 +13,23 @@ app.use(jwt({
   secret: jwksRsa.expressJwtSecret({
     cache: true,
     rateLimit: true,
-    jwksRequestsPerMinute: 2,
-    jwksUri: `${jwksHost}/.well-known/jwks.json`
+    jwksRequestsPerMinute: 5,
+    jwksUri: `${jwksUri}`
   }),
   audience: audience,
   issuer: issuer,
   algorithms: [ 'RS256' ]
 }));
 
-app.get('/me', (req, res) => {
-  res.json(req.user);
+app.get('/', (req, res) => {
+  res.json({result: "OK"});
 });
 
 app.use((err, req, res, next) => {
-  logger(err.name, err.message);
-  res.json({
-    name: err.name,
-    message: err.message
-  });
+  var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  logger(ip, err.name, err.message);
+  res.status(401);
+  res.json({result: "AUTHERR"});
 });
 
 // Start the server.
